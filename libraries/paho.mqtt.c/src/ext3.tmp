@@ -1,0 +1,287 @@
+
+  {******************************************************************************
+   * Copyright (c) 2009, 2016 IBM Corp.
+   *
+   * All rights reserved. This program and the accompanying materials
+   * are made available under the terms of the Eclipse Public License v1.0
+   * and Eclipse Distribution License v1.0 which accompany this distribution. 
+   *
+   * The Eclipse Public License is available at 
+   *    http://www.eclipse.org/legal/epl-v10.html
+   * and the Eclipse Distribution License is available at 
+   *   http://www.eclipse.org/org/documents/edl-v10.php.
+   *
+   * Contributors:
+   *    Ian Craggs - initial API and implementation 
+   *    Ian Craggs, Allan Stockdill-Mander - SSL connections
+   *    Ian Craggs - multiple server connection support
+   *    Ian Craggs - MQTT 3.1.1 support
+   *    Ian Craggs - fix for bug 444103 - success/failure callbacks not invoked
+   *    Ian Craggs - automatic reconnect and offline buffering (send while disconnected)
+   ****************************************************************************** }
+  {****************************************************************** }
+  {*
+   * @cond MQTTAsync_main
+   * @mainpage Asynchronous MQTT client library for C
+   * 
+   * &copy; Copyright IBM Corp. 2009, 2016
+   * 
+   * @brief An Asynchronous MQTT client library for C.
+   *
+   * An MQTT client application connects to MQTT-capable servers. 
+   * A typical client is responsible for collecting information from a telemetry 
+   * device and publishing the information to the server. It can also subscribe 
+   * to topics, receive messages, and use this information to control the 
+   * telemetry device.
+   * 
+   * MQTT clients implement the published MQTT v3 protocol. You can write your own
+   * API to the MQTT protocol using the programming language and platform of your 
+   * choice. This can be time-consuming and error-prone.
+   * 
+   * To simplify writing MQTT client applications, this library encapsulates
+   * the MQTT v3 protocol for you. Using this library enables a fully functional 
+   * MQTT client application to be written in a few lines of code.
+   * The information presented here documents the API provided
+   * by the Asynchronous MQTT Client library for C.
+   * 
+   * <b>Using the client</b><br>
+   * Applications that use the client library typically use a similar structure:
+   * <ul>
+   * <li>Create a client object</li>
+   * <li>Set the options to connect to an MQTT server</li>
+   * <li>Set up callback functions</li>
+   * <li>Connect the client to an MQTT server</li>
+   * <li>Subscribe to any topics the client needs to receive</li>
+   * <li>Repeat until finished:</li>
+   *     <ul>
+   *     <li>Publish any messages the client needs to</li>
+   *     <li>Handle any incoming messages</li>
+   *     </ul>
+   * <li>Disconnect the client</li>
+   * <li>Free any memory being used by the client</li>
+   * </ul>
+   * Some simple examples are shown here:
+   * <ul>
+   * <li>@ref publish</li>
+   * <li>@ref subscribe</li>
+   * </ul>
+   * Additional information about important concepts is provided here:
+   * <ul>
+   * <li>@ref async</li>
+   * <li>@ref wildcard</li>
+   * <li>@ref qos</li>
+   * <li>@ref tracing</li>
+   * </ul>
+   * @endcond
+    }
+  {/ @cond EXCLUDE }
+{$if defined(__cplusplus)}
+(* error 
+ extern "C" {
+{$endif}
+{$if !defined(MQTTASYNC_H)}
+in define line 86 *)
+{$if defined(WIN32) || defined(WIN64)}
+
+    { was #define dname def_expr }
+    function DLLImport : longint; { return type might be wrong }
+
+    { was #define dname def_expr }
+    function DLLExport : longint; { return type might be wrong }
+
+{$else}
+(* error 
+  #define DLLImport extern
+in define line 92 *)
+
+    { was #define dname def_expr }
+    function DLLExport : longint; { return type might be wrong }
+
+{$endif}
+{$include <stdio.h>}
+  {/ @endcond }
+{$if !defined(NO_PERSISTENCE)}
+{$include "MQTTClientPersistence.h"}
+{$endif}
+  {*
+   * Return code: No error. Indicates successful completion of an MQTT client
+   * operation.
+    }
+
+  const
+    MQTTASYNC_SUCCESS = 0;    
+  {*
+   * Return code: A generic error code indicating the failure of an MQTT client
+   * operation.
+    }
+    MQTTASYNC_FAILURE = -(1);    
+  { error code -2 is MQTTAsync_PERSISTENCE_ERROR  }
+    MQTTASYNC_PERSISTENCE_ERROR = -(2);    
+  {*
+   * Return code: The client is disconnected.
+    }
+    MQTTASYNC_DISCONNECTED = -(3);    
+  {*
+   * Return code: The maximum number of messages allowed to be simultaneously 
+   * in-flight has been reached.
+    }
+    MQTTASYNC_MAX_MESSAGES_INFLIGHT = -(4);    
+  {*
+   * Return code: An invalid UTF-8 string has been detected.
+    }
+    MQTTASYNC_BAD_UTF8_STRING = -(5);    
+  {*
+   * Return code: A NULL parameter has been supplied when this is invalid.
+    }
+    MQTTASYNC_NULL_PARAMETER = -(6);    
+  {*
+   * Return code: The topic has been truncated (the topic string includes
+   * embedded NULL characters). String functions will not access the full topic.
+   * Use the topic length value to access the full topic.
+    }
+    MQTTASYNC_TOPICNAME_TRUNCATED = -(7);    
+  {*
+   * Return code: A structure parameter does not have the correct eyecatcher
+   * and version number.
+    }
+    MQTTASYNC_BAD_STRUCTURE = -(8);    
+  {*
+   * Return code: A qos parameter is not 0, 1 or 2
+    }
+    MQTTASYNC_BAD_QOS = -(9);    
+  {*
+   * Return code: All 65535 MQTT msgids are being used
+    }
+    MQTTASYNC_NO_MORE_MSGIDS = -(10);    
+  {*
+   * Return code: the request is being discarded when not complete
+    }
+    MQTTASYNC_OPERATION_INCOMPLETE = -(11);    
+  {*
+   * Return code: no more messages can be buffered
+    }
+    MQTTASYNC_MAX_BUFFERED_MESSAGES = -(12);    
+  {*
+   * Default MQTT version to connect with.  Use 3.1.1 then fall back to 3.1
+    }
+    MQTTVERSION_DEFAULT = 0;    
+  {*
+   * MQTT version to connect with: 3.1
+    }
+    MQTTVERSION_3_1 = 3;    
+  {*
+   * MQTT version to connect with: 3.1.1
+    }
+    MQTTVERSION_3_1_1 = 4;    
+  {*
+   * Bad return code from subscribe, as defined in the 3.1.1 specification
+    }
+    MQTT_BAD_SUBSCRIBE = $80;    
+  {*
+   * A handle representing an MQTT client. A valid client handle is available
+   * following a successful call to MQTTAsync_create().
+    }
+
+  type
+    MQTTAsync = pointer;
+  {*
+   * A value representing an MQTT message. A token is returned to the
+   * client application when a message is published. The token can then be used to
+   * check that the message was successfully delivered to its destination (see
+   * MQTTAsync_publish(), 
+   * MQTTAsync_publishMessage(), 
+   * MQTTAsync_deliveryComplete(), and
+   * MQTTAsync_getPendingTokens()).
+    }
+
+    MQTTAsync_token = longint;
+  {*
+   * A structure representing the payload and attributes of an MQTT message. The
+   * message topic is not part of this structure (see MQTTAsync_publishMessage(),
+   * MQTTAsync_publish(), MQTTAsync_receive(), MQTTAsync_freeMessage()
+   * and MQTTAsync_messageArrived()).
+    }
+  {* The eyecatcher for this structure.  must be MQTM.  }
+  {* The version number of this structure.  Must be 0  }
+  {* The length of the MQTT message payload in bytes.  }
+  {* A pointer to the payload of the MQTT message.  }
+  {* 
+       * The quality of service (QoS) assigned to the message. 
+       * There are three levels of QoS:
+       * <DL>
+       * <DT><B>QoS0</B></DT>
+       * <DD>Fire and forget - the message may not be delivered</DD>
+       * <DT><B>QoS1</B></DT>
+       * <DD>At least once - the message will be delivered, but may be 
+       * delivered more than once in some circumstances.</DD>
+       * <DT><B>QoS2</B></DT>
+       * <DD>Once and one only - the message will be delivered exactly once.</DD>
+       * </DL>
+        }
+  {* 
+       * The retained flag serves two purposes depending on whether the message
+       * it is associated with is being published or received. 
+       * 
+       * <b>retained = true</b><br>
+       * For messages being published, a true setting indicates that the MQTT 
+       * server should retain a copy of the message. The message will then be 
+       * transmitted to new subscribers to a topic that matches the message topic.
+       * For subscribers registering a new subscription, the flag being true
+       * indicates that the received message is not a new one, but one that has
+       * been retained by the MQTT server.
+       *
+       * <b>retained = false</b> <br>
+       * For publishers, this ndicates that this message should not be retained 
+       * by the MQTT server. For subscribers, a false setting indicates this is 
+       * a normal message, received as a result of it being published to the 
+       * server.
+        }
+  {* 
+        * The dup flag indicates whether or not this message is a duplicate. 
+        * It is only meaningful when receiving QoS1 messages. When true, the
+        * client application should take appropriate action to deal with the
+        * duplicate message.
+         }
+  {* The message identifier is normally reserved for internal use by the
+        * MQTT client and server. 
+         }
+
+    MQTTAsync_message = record
+        struct_id : array[0..3] of char;
+        struct_version : longint;
+        payloadlen : longint;
+        payload : pointer;
+        qos : longint;
+        retained : longint;
+        dup : longint;
+        msgid : longint;
+      end;
+(* error 
+#define MQTTAsync_message_initializer { {'M', 'Q', 'T', 'M'}, 0, 0, NULL, 0, 0, 0, 0 }
+in define line 258 *)
+    {*
+     * This is a callback function. The client application
+     * must provide an implementation of this function to enable asynchronous 
+     * receipt of messages. The function is registered with the client library by
+     * passing it as an argument to MQTTAsync_setCallbacks(). It is
+     * called by the client library when a new message that matches a client
+     * subscription has been received from the server. This function is executed on
+     * a separate thread to the one on which the client application is running.
+     * @param context A pointer to the <i>context</i> value originally passed to 
+     * MQTTAsync_setCallbacks(), which contains any application-specific context.
+     * @param topicName The topic associated with the received message.
+     * @param topicLen The length of the topic if there are one
+     * more NULL characters embedded in <i>topicName</i>, otherwise <i>topicLen</i>
+     * is 0. If <i>topicLen</i> is 0, the value returned by <i>strlen(topicName)</i>
+     * can be trusted. If <i>topicLen</i> is greater than 0, the full topic name
+     * can be retrieved by accessing <i>topicName</i> as a byte array of length 
+     * <i>topicLen</i>. 
+     * @param message The MQTTAsync_message structure for the received message. 
+     * This structure contains the message payload and attributes.
+     * @return This function must return a boolean value indicating whether or not
+     * the message has been safely received by the client application. Returning 
+     * true indicates that the message has been successfully handled.  
+     * Returning false indicates that there was a problem. In this 
+     * case, the client library will reinvoke MQTTAsync_messageArrived() to 
+     * attempt to deliver the message to the application again.
+      }

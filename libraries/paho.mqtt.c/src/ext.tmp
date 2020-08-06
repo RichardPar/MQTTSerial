@@ -1,0 +1,18 @@
+    { was #define dname def_expr }
+    function DLLImport : longint; { return type might be wrong }
+      begin
+        DLLImport:=__declspec(dllimport);
+      end;
+
+    { was #define dname def_expr }
+    function DLLExport : longint; { return type might be wrong }
+      begin
+        DLLExport:=__declspec(dllexport);
+      end;
+
+    { was #define dname def_expr }
+    function DLLExport : longint; { return type might be wrong }
+      begin
+        DLLExport:=__attribute__(visibility('default'));
+      end;
+
