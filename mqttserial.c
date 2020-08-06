@@ -33,6 +33,7 @@ int serial_setparameters (int fd, int speed, int parity);
 void *serial_read_thread(void *p);
 void set_blocking_mode (int fd, int should_block);
 void start_read_thread(void);
+int open_port(char *port);
 
 
 void start_serial(void *pvt)
@@ -73,7 +74,8 @@ void start_serial(void *pvt)
   sprintf(node,"ALL/CLOSE");
   mqtt_register_callback(node,&mqtt_serial_close_callback,pvt);
 
-
+  open_port(g_serialPort);
+  start_read_thread();
 }
 
 
@@ -102,20 +104,19 @@ int mqtt_serial_close_callback(char *node,char *msg, int len, void *p)
     return 0;
 }
 
-int mqtt_serial_open_callback(char *node,char *msg, int len, void *p)
-{
-    char outnode[128];
-    char outString[128];
-    int fd=-1;
-    int rc=-1;
 
-    if (g_portfd < 0)
+int open_port(char *port)
+{
+ int fd=-1;
+ int rc=-1;
+
+  if (g_portfd < 0)
      {
-      fd = open (g_serialPort, O_RDWR | O_NOCTTY | O_SYNC);
+      fd = open (port, O_RDWR | O_NOCTTY | O_SYNC);
       if (fd >= 0)
       {
         //The values for speed are B115200, B230400, B9600, B19200, B38400, B57600, B1200, B2400, B4800 .. more
-        rc = serial_setparameters(fd, B230400, 0); 
+        rc = serial_setparameters(fd, B230400, 0);
       }
 
       if (rc < 0)
@@ -125,11 +126,22 @@ int mqtt_serial_open_callback(char *node,char *msg, int len, void *p)
       {
        g_portfd = fd;
       }
-    } 
+    }
 
     if (g_portfd >= 0)
         set_blocking_mode (g_portfd,0);
-    
+
+   return fd;
+}
+
+
+int mqtt_serial_open_callback(char *node,char *msg, int len, void *p)
+{
+    char outnode[128];
+    char outString[128];
+    int rc=-1;
+
+    rc = open_port(g_serialPort);
 
     sprintf(outString,"%d",g_portfd);
     sprintf(outnode,"OPEN");
